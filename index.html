@@ -1,0 +1,141 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>基本情報</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans">
+  <div class="max-w-2xl mx-auto mt-10 p-6 bg-white rounded-lg shadow">
+    <h1 class="text-2xl font-bold mb-6">基本情報の入力</h1>
+    <form id="basicForm" class="space-y-4">
+      <div>
+        <label for="name" class="block font-medium">氏名（フルネーム）</label>
+        <input type="text" id="name" class="w-full border rounded p-2" required>
+      </div>
+      <div>
+        <label for="email" class="block font-medium">メールアドレス</label>
+        <input type="email" id="email" class="w-full border rounded p-2" required>
+      </div>
+      <div>
+        <label for="gender" class="block font-medium">性別</label>
+        <select id="gender" class="w-full border rounded p-2">
+          <option value="">選択してください</option>
+          <option value="男性">男性</option>
+          <option value="女性">女性</option>
+          <option value="その他">その他</option>
+          <option value="無回答">無回答</option>
+        </select>
+      </div>
+      <div>
+        <label for="birthday" class="block font-medium">生年月日</label>
+        <input type="date" id="birthday" class="w-full border rounded p-2">
+      </div>
+      <div>
+        <label for="affiliation" class="block font-medium">所属</label>
+        <select id="affiliation" class="w-full border rounded p-2">
+          <option value="">選択してください</option>
+          <option value="正社員">正社員</option>
+          <option value="団体職員">団体職員</option>
+          <option value="公務員">公務員</option>
+          <option value="派遣社員">派遣社員</option>
+          <option value="契約社員">契約社員</option>
+          <option value="委託社員">委託社員</option>
+          <option value="会社役員">会社役員</option>
+          <option value="起業家">起業家（会社設立から1年未満の会社役員）</option>
+          <option value="個人事業主">個人事業主</option>
+          <option value="自営業">自営業</option>
+          <option value="学生">学生</option>
+          <option value="専業主婦">専業主婦</option>
+          <option value="アルバイト">アルバイト</option>
+          <option value="パート">パート</option>
+          <option value="無職">無職</option>
+          <option value="年金受給者">年金受給者</option>
+          <option value="生活保護受給者">生活保護受給者</option>
+          <option value="その他">その他</option>
+        </select>
+        <input type="text" id="affiliationOther" class="w-full mt-2 border rounded p-2 hidden" placeholder="所属を記入してください">
+      </div>
+      <div>
+        <label class="block font-medium">趣味（複数選択可）</label>
+        <div class="grid grid-cols-2 gap-2" id="hobbyOptions">
+          <!-- 選択肢はJavaScriptで生成 -->
+        </div>
+        <input type="text" id="hobbyOther" class="w-full mt-2 border rounded p-2 hidden" placeholder="その他の趣味を記入してください">
+      </div>
+
+      <div class="text-center mt-6">
+        <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">次へ</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    const hobbyList = [
+      "ウォーキング・ランニング・筋トレ","読書","映画・動画鑑賞","料理","温泉・サウナ","旅行","絵画・イラスト",
+      "ガーデニング","編み物・手芸","DIY","カフェ・レストラン巡り","カメラ","サイクリング・ドライブ","スポーツ",
+      "ショッピング","瞑想・ヨガ","美術館巡り","キャンプ・登山","テレビゲーム・ボードゲーム","楽器演奏・音楽鑑賞",
+      "スポーツ観戦","演劇・お笑い鑑賞","推し活","英会話・語学","探し中","無し","その他"
+    ];
+
+    const form = document.getElementById('basicForm');
+    const hobbyContainer = document.getElementById('hobbyOptions');
+
+    // 趣味選択肢生成
+    hobbyList.forEach(hobby => {
+      const id = "hobby_" + hobby;
+      const div = document.createElement("div");
+      div.className = "flex items-center";
+      div.innerHTML = `<input type="checkbox" id="${id}" value="${hobby}" class="mr-2"> <label for="${id}">${hobby}</label>`;
+      hobbyContainer.appendChild(div);
+    });
+
+    // その他項目表示
+    document.getElementById("affiliation").addEventListener("change", e => {
+      document.getElementById("affiliationOther").classList.toggle("hidden", e.target.value !== "その他");
+    });
+    document.getElementById("hobbyOptions").addEventListener("change", e => {
+      if (e.target.value === "その他") {
+        document.getElementById("hobbyOther").classList.toggle("hidden", !e.target.checked);
+      }
+    });
+
+    // 自動保存・復元
+    window.onload = () => {
+      const data = JSON.parse(localStorage.getItem("basicInfo") || "{}");
+      for (const id of ["name", "email", "gender", "birthday", "affiliation", "affiliationOther"]) {
+        if (data[id]) document.getElementById(id).value = data[id];
+      }
+      if (data.hobbies) {
+        data.hobbies.forEach(val => {
+          const el = document.querySelector(`#hobbyOptions input[value="${val}"]`);
+          if (el) el.checked = true;
+        });
+        if (data.hobbyOther) document.getElementById("hobbyOther").value = data.hobbyOther;
+        if (data.hobbies.includes("その他")) document.getElementById("hobbyOther").classList.remove("hidden");
+      }
+    };
+
+    form.addEventListener("input", () => {
+      const data = {
+        name: form.name.value,
+        email: form.email.value,
+        gender: form.gender.value,
+        birthday: form.birthday.value,
+        affiliation: form.affiliation.value,
+        affiliationOther: form.affiliationOther.value,
+        hobbies: Array.from(form.querySelectorAll("#hobbyOptions input:checked")).map(e => e.value),
+        hobbyOther: form.hobbyOther.value
+      };
+      localStorage.setItem("basicInfo", JSON.stringify(data));
+    });
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      window.location.href = "survey.html";
+    });
+  </script>
+</body>
+</html>

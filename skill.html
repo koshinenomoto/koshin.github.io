@@ -1,0 +1,135 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>スキルに関する設問</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="questions_skill.js"></script>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans">
+  <div class="max-w-3xl mx-auto p-6 bg-white rounded-lg shadow mt-10">
+    <h1 class="text-2xl font-bold mb-4">スキルに関する設問</h1>
+
+    <div class="mb-6">
+      <label class="block font-semibold mb-2">設問パターンを選択してください：</label>
+      <select id="questionType" class="form-select border rounded p-2 w-full">
+        <option value="sy_full">社会人基礎力_フルVer.</option>
+        <option value="sy_simple">社会人基礎力_簡易Ver.</option>
+        <option value="ec_full">EntreComp_フルVer.</option>
+        <option value="ec_simple">EntreComp_簡易Ver.</option>
+      </select>
+    </div>
+
+    <div id="skillIntro" class="mb-6 text-sm text-gray-700 leading-relaxed"></div>
+
+    <form id="skillForm">
+      <div id="questionContainer"></div>
+      <div class="text-center mt-10">
+        <button type="submit" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
+          回答を送信する
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    const questionContainer = document.getElementById("questionContainer");
+    const skillIntro = document.getElementById("skillIntro");
+    const form = document.getElementById("skillForm");
+    const questionTypeSelector = document.getElementById("questionType");
+
+    function renderQuestions(type) {
+      const questions = getQuestionsByType(type);
+      questionContainer.innerHTML = "";
+      skillIntro.innerHTML = `
+        <p class="mb-2">これから、${questions.length}個の文を提示します。</p>
+        <p class="mb-2">それぞれどの程度自分に当てはまるか考えてみてください。</p>
+        <p class="mb-2">その上で、それぞれの程度をお答えください。</p>
+      `;
+
+      questions.forEach((q, i) => {
+        const qId = `skill${i + 1}`;
+        const block = document.createElement("div");
+        block.className = "mb-6 p-4 border rounded shadow-sm bg-green-50";
+
+        const optionsHTML = [1,2,3,4,5,6].map(v => `
+          <label class="inline-flex items-center mr-4">
+            <input type="radio" name="${qId}" value="${v}" class="form-radio text-green-600" required />
+            <span class="ml-1">${["全く当てはまらない", "あまり当てはまらない", "少し当てはまらない", "少し当てはまる", "かなり当てはまる", "非常に当てはまる"][v-1]}</span>
+          </label>`).join('');
+
+        block.innerHTML = `
+          <p class="font-medium mb-2">${i + 1}. <span>${q}</span></p>
+          <div class="flex flex-wrap gap-y-2">${optionsHTML}</div>
+        `;
+        questionContainer.appendChild(block);
+      });
+
+      const saved = JSON.parse(localStorage.getItem("skillAnswers_" + type) || "{}");
+      if (saved.answers) {
+        for (let [id, value] of Object.entries(saved.answers)) {
+          const input = document.querySelector(`input[name="${id}"][value="${value}"]`);
+          if (input) input.checked = true;
+        }
+      }
+    }
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      submitSkillAnswers();
+    });
+
+    questionTypeSelector.addEventListener("change", () => {
+      renderQuestions(questionTypeSelector.value);
+    });
+
+    renderQuestions(questionTypeSelector.value);
+
+    function submitSkillAnswers() {
+      const type = questionTypeSelector.value;
+      const questions = getQuestionsByType(type);
+      const formData = new FormData(form);
+      const answers = {};
+
+      for (let i = 0; i < questions.length; i++) {
+        const key = `skill${i + 1}`;
+        const val = formData.get(key);
+        if (!val) {
+          alert("全ての設問に回答してください。");
+          return;
+        }
+        answers[key] = val;
+      }
+
+      localStorage.setItem("skillAnswers_" + type, JSON.stringify({
+        timestamp: new Date().toISOString(),
+        answers: answers
+      }));
+      localStorage.setItem("submittedSkillType", type);
+
+      const basicInfo = JSON.parse(localStorage.getItem("basicInfo") || "{}");
+      const surveyAnswers = JSON.parse(localStorage.getItem("surveyAnswers") || "[]");
+
+      fetch("https://script.google.com/macros/s/AKfycbyy9uYrsBt3A46i08xeAjkVS24DYwI42HGAhZ3DxhgiCx7wsEjekcITdXgxu3tE8-0/exec", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...basicInfo,
+          surveyAnswers,
+          skillType: type,
+          skillAnswers: answers
+        })
+      })
+      .then(() => {
+        window.location.href = "submit.html";
+      })
+      .catch((err) => {
+        alert("送信に失敗しました。");
+        console.error(err);
+      });
+    }
+  </script>
+</body>
+</html>
